@@ -2,14 +2,15 @@
   "name": "pyrolysis-scada",
   "version": "1.0.0",
   "description": "Pyrolysis Plant Virtual SCADA",
+  "main": "node_modules/node-red/red.js",
   "scripts": {
-    "start": "node-red -u . -p $PORT"
+    "start": "node-red --settings settings.js --userDir . -p $PORT"
   },
   "dependencies": {
     "node-red": "^3.1.0",
-    "node-red-dashboard": "^3.6.0"S
+    "node-red-dashboard": "^3.6.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": "18.x"
   }
 }
