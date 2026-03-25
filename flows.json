@@ -1,0 +1,427 @@
+[
+    {
+        "id": "ac234b6246eebc9f",
+        "type": "inject",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "SCADA Tick 1s",
+        "repeat": "1",
+        "once": true,
+        "onceDelay": 0.1,
+        "payload": "",
+        "payloadType": "date",
+        "x": 520,
+        "y": 380,
+        "wires": [
+            [
+                "fa26d636702eb71c"
+            ]
+        ]
+    },
+    {
+        "id": "fa26d636702eb71c",
+        "type": "function",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "SCADA Process Engine",
+        "func": "var tick   = context.get('tick')   || 0;\nvar umin   = context.get('umin')   || 0;\nvar uhrs   = context.get('uhrs')   || 0;\nvar usec   = context.get('usec')   || 0;\n\ntick++;\nusec++;\nif(usec >= 60){ usec=0; umin++; }\nif(umin >= 60){ umin=0; uhrs++; }\n\nvar cycle = tick % 140;\nvar state, temp, press, moist, weight, co, ch4, co2, pin, pout, alarm=0;\n\nif(cycle < 10){\n    state=0;\n    temp=25+(Math.random()*0.5);\n    press=1.0+(Math.random()*0.02);\n    moist=30+(Math.random()*0.5);\n    weight=100.0;\n    co=0.1; ch4=0.1; co2=0.5;\n    pin=2.0; pout=0.0;\n}\nelse if(cycle < 40){\n    state=1;\n    var d=cycle-10;\n    temp=25+(d/30)*125+(Math.random()*2);\n    press=1.0+(d/30)*0.3+(Math.random()*0.02);\n    moist=30-(d/30)*25+(Math.random()*0.5);\n    weight=100.0;\n    co=0.5+(d/30)*2;\n    ch4=0.2+(d/30)*1;\n    co2=1+(d/30)*3;\n    pin=15+(Math.random()*1);\n    pout=2+(Math.random()*0.5);\n}\nelse if(cycle < 100){\n    state=2;\n    var p=cycle-40;\n    temp=150+(p/60)*350+(Math.random()*3);\n    press=1.3+(p/60)*0.9+(Math.random()*0.05);\n    moist=5+(Math.random()*0.5);\n    weight=100-(p/60)*65+(Math.random()*1);\n    co=2.5+(p/60)*12.5+(Math.random()*1);\n    ch4=1+(p/60)*24+(Math.random()*1);\n    co2=4+(p/60)*16+(Math.random()*1);\n    pin=20+(Math.random()*2);\n    pout=8+(Math.random()*1);\n}\nelse{\n    state=3;\n    var c=cycle-100;\n    temp=500-(c/40)*475+(Math.random()*3);\n    press=2.2-(c/40)*1.2+(Math.random()*0.03);\n    moist=5+(Math.random()*0.5);\n    weight=35+(Math.random()*1);\n    co=15-(c/40)*14.5+(Math.random()*0.5);\n    ch4=25-(c/40)*24.5+(Math.random()*0.5);\n    co2=20-(c/40)*19.5+(Math.random()*0.5);\n    pin=5+(Math.random()*1);\n    pout=3+(Math.random()*0.5);\n}\n\nif(temp>580||press>2.3){alarm=1;}\n\nvar stateNames=['🟡 IDLE','🔵 DRYING','🔴 PYROLYSIS','🟢 COOLING'];\n\ncontext.set('tick',tick);\ncontext.set('umin',umin);\ncontext.set('uhrs',uhrs);\ncontext.set('usec',usec);\n\nmsg.payload={\n    state: stateNames[state],\n    temperature: parseFloat(temp.toFixed(1)),\n    pressure: parseFloat(press.toFixed(2)),\n    moisture: parseFloat(Math.max(0,moist).toFixed(1)),\n    weight: parseFloat(Math.max(0,weight).toFixed(1)),\n    alarm: alarm,\n    power_in: parseFloat(pin.toFixed(1)),\n    power_out: parseFloat(pout.toFixed(1)),\n    uptime_hours: uhrs,\n    uptime_minutes: umin,\n    co_pct: parseFloat(Math.max(0,co).toFixed(1)),\n    ch4_pct: parseFloat(Math.max(0,ch4).toFixed(1)),\n    co2_pct: parseFloat(Math.max(0,co2).toFixed(1))\n};\nreturn msg;",
+        "outputs": 1,
+        "x": 750,
+        "y": 380,
+        "wires": [
+            [
+                "afe2efb84d3e6cd5"
+            ]
+        ]
+    },
+    {
+        "id": "afe2efb84d3e6cd5",
+        "type": "function",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "Split Data",
+        "func": "var d = msg.payload;\n\nnode.send([\n    {payload: d.state},\n    {payload: d.temperature},\n    {payload: d.pressure},\n    {payload: d.moisture},\n    {payload: d.weight},\n    {payload: d.alarm===1?'🚨 DANGER':'✅ SAFE'},\n    {payload: d.power_in},\n    {payload: d.power_out},\n    {payload: (String(d.uptime_hours).padStart(2,'0')+'h : '+String(d.uptime_minutes).padStart(2,'0')+'m')},\n    {payload: d.co_pct},\n    {payload: d.ch4_pct},\n    {payload: d.co2_pct},\n    {payload: d.temperature}\n]);\nreturn null;",
+        "outputs": 13,
+        "x": 970,
+        "y": 380,
+        "wires": [
+            [
+                "af2075f172c99a46"
+            ],
+            [
+                "632aedaf23da13e7"
+            ],
+            [
+                "0d2d346cd5babd99"
+            ],
+            [
+                "8826d032ea1d0aff"
+            ],
+            [
+                "e00c6f02c1933f04"
+            ],
+            [
+                "3b87c2891e947491"
+            ],
+            [
+                "406f0837280d948c"
+            ],
+            [
+                "2eafca631400dc5e"
+            ],
+            [
+                "cbf6a50c78cde1b3"
+            ],
+            [
+                "5bc46799d15281a3"
+            ],
+            [
+                "2d855c3e48fe3c60"
+            ],
+            [
+                "7a9d693be21bf6f9"
+            ],
+            [
+                "bdee8e1b691bae6e"
+            ]
+        ]
+    },
+    {
+        "id": "af2075f172c99a46",
+        "type": "ui_text",
+        "z": "0bcb8d1bb1138ce4",
+        "group": "2bb4ab3c27347e5e",
+        "order": 1,
+        "width": 6,
+        "height": 1,
+        "name": "Process State",
+        "format": "Process State: <b>{{msg.payload}}</b>",
+        "layout": "row-spread",
+        "x": 1220,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "632aedaf23da13e7",
+        "type": "ui_gauge",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "Temperature",
+        "group": "2bb4ab3c27347e5e",
+        "order": 2,
+        "width": 3,
+        "height": 3,
+        "gtype": "gage",
+        "title": "Temperature",
+        "label": "°C",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 700,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 300,
+        "seg2": 550,
+        "x": 1220,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "0d2d346cd5babd99",
+        "type": "ui_gauge",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "Pressure",
+        "group": "2bb4ab3c27347e5e",
+        "order": 3,
+        "width": 3,
+        "height": 3,
+        "gtype": "gage",
+        "title": "Pressure",
+        "label": "Bar",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 3,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 1.5,
+        "seg2": 2.2,
+        "x": 1220,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "8826d032ea1d0aff",
+        "type": "ui_gauge",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "Moisture",
+        "group": "2bb4ab3c27347e5e",
+        "order": 4,
+        "width": 3,
+        "height": 3,
+        "gtype": "gage",
+        "title": "Moisture",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 50,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 20,
+        "seg2": 35,
+        "x": 1220,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "e00c6f02c1933f04",
+        "type": "ui_gauge",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "Weight",
+        "group": "2bb4ab3c27347e5e",
+        "order": 5,
+        "width": 3,
+        "height": 3,
+        "gtype": "gage",
+        "title": "Biomass Weight",
+        "label": "kg",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 120,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 40,
+        "seg2": 80,
+        "x": 1220,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "3b87c2891e947491",
+        "type": "ui_text",
+        "z": "0bcb8d1bb1138ce4",
+        "group": "2bb4ab3c27347e5e",
+        "order": 6,
+        "width": 6,
+        "height": 1,
+        "name": "Alarm",
+        "format": "Alarm: <b>{{msg.payload}}</b>",
+        "layout": "row-spread",
+        "x": 1220,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "406f0837280d948c",
+        "type": "ui_text",
+        "z": "0bcb8d1bb1138ce4",
+        "group": "power_group",
+        "order": 1,
+        "width": 3,
+        "height": 1,
+        "name": "Power In",
+        "format": "🔌 {{msg.payload}} kW",
+        "layout": "row-spread",
+        "x": 1220,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "2eafca631400dc5e",
+        "type": "ui_text",
+        "z": "0bcb8d1bb1138ce4",
+        "group": "power_group",
+        "order": 2,
+        "width": 3,
+        "height": 1,
+        "name": "Power Out",
+        "format": "⚡ {{msg.payload}} kW",
+        "layout": "row-spread",
+        "x": 1220,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "cbf6a50c78cde1b3",
+        "type": "ui_text",
+        "z": "0bcb8d1bb1138ce4",
+        "group": "power_group",
+        "order": 3,
+        "width": 3,
+        "height": 1,
+        "name": "Uptime",
+        "format": "⏱️ {{msg.payload}}",
+        "layout": "row-spread",
+        "x": 1220,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "5bc46799d15281a3",
+        "type": "ui_gauge",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "CO",
+        "group": "gas_group",
+        "order": 1,
+        "width": 3,
+        "height": 3,
+        "gtype": "gage",
+        "title": "CO",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 30,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 10,
+        "seg2": 20,
+        "x": 1220,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "2d855c3e48fe3c60",
+        "type": "ui_gauge",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "CH4",
+        "group": "gas_group",
+        "order": 2,
+        "width": 3,
+        "height": 3,
+        "gtype": "gage",
+        "title": "CH4",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 30,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 10,
+        "seg2": 20,
+        "x": 1220,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "7a9d693be21bf6f9",
+        "type": "ui_gauge",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "CO2",
+        "group": "gas_group",
+        "order": 3,
+        "width": 3,
+        "height": 3,
+        "gtype": "gage",
+        "title": "CO2",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 30,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": 10,
+        "seg2": 20,
+        "x": 1220,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "bdee8e1b691bae6e",
+        "type": "ui_chart",
+        "z": "0bcb8d1bb1138ce4",
+        "name": "Temperature Chart",
+        "group": "866b6a1051f1fc4f",
+        "order": 1,
+        "width": 12,
+        "height": 4,
+        "label": "Temperature (°C)",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "0",
+        "ymax": "700",
+        "removeOlder": 1,
+        "removeOlderPoints": 100,
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "colors": [
+            "#ff7043"
+        ],
+        "outputs": 1,
+        "x": 1220,
+        "y": 860,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2bb4ab3c27347e5e",
+        "type": "ui_group",
+        "name": "Process Variables",
+        "tab": "main_tab",
+        "order": 1,
+        "disp": true,
+        "width": 12
+    },
+    {
+        "id": "power_group",
+        "type": "ui_group",
+        "name": "Electricity",
+        "tab": "main_tab",
+        "order": 2,
+        "disp": true,
+        "width": 12
+    },
+    {
+        "id": "gas_group",
+        "type": "ui_group",
+        "name": "Flue Gas Composition",
+        "tab": "main_tab",
+        "order": 3,
+        "disp": true,
+        "width": 12
+    },
+    {
+        "id": "866b6a1051f1fc4f",
+        "type": "ui_group",
+        "name": "Temperature History",
+        "tab": "main_tab",
+        "order": 4,
+        "disp": true,
+        "width": 12
+    },
+    {
+        "id": "main_tab",
+        "type": "ui_tab",
+        "name": "Pyrolysis Monitor",
+        "icon": "dashboard",
+        "order": 1
+    },
+    {
+        "id": "abd6e3a482f9ee1f",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "node-red-dashboard": "3.6.6"
+        }
+    }
+]
